@@ -1,11 +1,4 @@
----
-title: DevGuard AI
-emoji: 🛡️
-colorFrom: blue
-colorTo: indigo
-sdk: static
-pinned: false
----
+
 
 # DevGuard AI — Code Security Intelligence
 
