@@ -26,4 +26,4 @@ The companion LoRA adapter trained for this project is available on Hugging Face
 - **Deployment:** Hugging Face Spaces (Static SDK)
 
 ## Live Demo
-Check out the live interactive space on Hugging Face: [DevGuard AI Live Space](https://huggingface.co/spaces/YOUR_USERNAME/devguard-ai)
+Check out the live interactive space on Hugging Face: [DevGuard AI Live Space]([https://huggingface.co/spaces/YOUR_USERNAME/devguard-ai](https://huggingface.co/spaces/nehalkamal7/devguard-ai))
