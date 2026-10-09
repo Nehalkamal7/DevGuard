@@ -3,340 +3,652 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DevGuard AI — Code Security Intelligence</title>
+  <title>DevGuard — Static & Generative Code Auditor</title>
   <style>
     :root {
-      --bg:#080d18; --panel:#111a2b; --line:#26344b;
-      --text:#edf3ff; --muted:#94a5c3; --blue:#76a2ff;
-      --red:#ff7185; --yellow:#ffcc75; --green:#60ddb0; --purple:#c084fc;
+      --bg-base: #090c10;
+      --bg-surface: #0d1117;
+      --bg-subtle: #161b22;
+      --border: #30363d;
+      --border-focus: #58a6ff;
+      --text-main: #f0f6fc;
+      --text-muted: #8b949e;
+      --primary: #1f6feb;
+      --primary-hover: #388bfd;
+      --danger: #f85149;
+      --warning: #d29922;
+      --success: #3fb950;
+      --font-code: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
     }
-    * { box-sizing:border-box; }
-    body { margin:0; background:var(--bg); color:var(--text); font:15px/1.6 Inter,system-ui,Arial,sans-serif; }
-    header { border-bottom:1px solid var(--line); padding:16px 6%; display:flex; justify-content:space-between; align-items:center; gap:12px; }
-    .brand { font-weight:850; font-size:21px; letter-spacing:-.7px; }
-    .brand span { color:var(--blue); }
-    .header-actions { display:flex; gap:10px; align-items:center; }
-    .pill { font-size:12px; border:1px solid var(--line); padding:5px 12px; border-radius:99px; color:var(--green); background:#0c1626; }
-    
-    main { max-width:1160px; margin:auto; padding:35px 22px 70px; }
-    .eyebrow { color:var(--blue); font-weight:750; font-size:12px; letter-spacing:2px; }
-    h1 { font-size:clamp(30px, 4.5vw, 48px); line-height:1.15; letter-spacing:-1.5px; margin:10px 0; }
-    h1 span { color:var(--blue); }
-    .subtitle { color:var(--muted); max-width:690px; margin-bottom:24px; font-size:14px; }
-    
-    .api-bar { background:#0d182a; border:1px solid var(--line); border-radius:12px; padding:12px 18px; display:flex; gap:12px; align-items:center; margin-bottom:22px; flex-wrap:wrap; }
-    .api-bar input { flex:1; min-width:240px; background:#080f1d; border:1px solid var(--line); border-radius:8px; padding:9px 12px; color:#fff; font-family:monospace; font-size:13px; outline:none; }
-    .api-bar input:focus { border-color:var(--blue); }
 
-    .grid { display:grid; grid-template-columns:1.12fr .88fr; gap:18px; }
-    .panel { background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:20px; min-width:0; }
-    .panel-head { display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:14px; }
-    h2 { font-size:16px; margin:0; }
-    small, .muted { color:var(--muted); }
-    
-    textarea { width:100%; min-height:360px; resize:vertical; background:#080f1d; border:1px solid var(--line); border-radius:10px; padding:14px; color:#d8e5ff; font:13px/1.7 ui-monospace,Consolas,monospace; outline:none; }
-    textarea:focus { border-color:var(--blue); }
-    
-    button { border:1px solid var(--line); border-radius:9px; padding:9px 14px; background:#19253a; color:var(--text); cursor:pointer; font-weight:700; font-size:13px; transition:0.2s; }
-    button:hover { border-color:var(--blue); background:#22324e; }
-    .btn-blue { background:var(--blue); color:#071020; border-color:var(--blue); }
-    .btn-blue:hover { background:#93b7ff; }
-    .btn-ai { background:linear-gradient(135deg, #6366f1, #a855f7); color:#fff; border:none; width:100%; padding:13px; margin-top:8px; font-size:14px; }
-    .btn-ai:hover { opacity:0.95; box-shadow:0 0 15px rgba(168,85,247,0.3); }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg-base);
+      color: var(--text-main);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      font-size: 14px;
+      line-height: 1.5;
+    }
 
-    .actions { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
-    .stats { display:grid; grid-template-columns:repeat(3,1fr); gap:9px; margin:16px 0; }
-    .stat { background:#0a1221; border:1px solid var(--line); border-radius:11px; padding:12px; }
-    .stat strong { font-size:22px; display:block; }
-    .stat span { font-size:11px; color:var(--muted); }
-    
-    .scoreline { height:7px; background:#26334a; border-radius:9px; overflow:hidden; margin:8px 0 16px; }
-    .scorefill { height:100%; width:0; background:var(--green); transition:width .3s; }
-    
-    .result-list { display:grid; gap:10px; max-height:550px; overflow-y:auto; padding-right:4px; }
-    .issue { border:1px solid var(--line); background:#0b1322; padding:14px; border-radius:11px; }
-    .issue-top { display:flex; justify-content:space-between; gap:10px; align-items:center; }
-    .severity { font-size:10px; font-weight:850; letter-spacing:.7px; }
-    .high { color:var(--red); } .medium { color:var(--yellow); } .low { color:var(--green); } .ai-tag { color:var(--purple); }
-    .issue p { color:#bac8df; font-size:13px; margin:7px 0; }
-    .issue code { color:#b9d0ff; font-size:12px; background:#141f33; padding:2px 6px; border-radius:4px; display:inline-block; margin:3px 0; word-break:break-all; }
-    .issue .fix { color:var(--green); font-size:12.5px; }
-    
-    .empty { border:1px dashed var(--line); border-radius:11px; padding:25px; text-align:center; color:var(--muted); font-size:13px; }
-    .footer { margin-top:15px; font-size:12px; color:var(--muted); }
-    .tag { color:var(--blue); font-size:11px; }
-    
-    @media(max-width:850px){ .grid{grid-template-columns:1fr;} }
+    /* Navigation */
+    header {
+      border-bottom: 1px solid var(--border);
+      background: var(--bg-surface);
+      padding: 14px 32px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .brand-title {
+      font-size: 16px;
+      font-weight: 600;
+      letter-spacing: -0.2px;
+    }
+    .brand-subtitle {
+      color: var(--text-muted);
+      font-size: 12px;
+      margin-left: 8px;
+      padding-left: 8px;
+      border-left: 1px solid var(--border);
+    }
+    .badge {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 3px 8px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+    }
+
+    /* Container */
+    main {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 28px 24px 60px;
+    }
+
+    /* API Configuration */
+    .config-strip {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px 16px;
+      margin-bottom: 20px;
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .config-strip label {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-muted);
+    }
+    .config-strip input {
+      flex: 1;
+      min-width: 280px;
+      background: var(--bg-base);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px 12px;
+      color: var(--text-main);
+      font-family: var(--font-code);
+      font-size: 12px;
+    }
+    .config-strip input:focus {
+      outline: none;
+      border-color: var(--border-focus);
+    }
+
+    /* Grid Layout */
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    @media (max-width: 900px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+
+    .card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      display: flex;
+      flex-direction: column;
+    }
+    .card-header {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .card-header h2 {
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      color: var(--text-muted);
+    }
+    .card-body {
+      padding: 16px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Editor */
+    textarea {
+      width: 100%;
+      height: 380px;
+      background: var(--bg-base);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px;
+      color: var(--text-main);
+      font-family: var(--font-code);
+      font-size: 13px;
+      line-height: 1.6;
+      resize: vertical;
+    }
+    textarea:focus {
+      outline: none;
+      border-color: var(--border-focus);
+    }
+
+    /* Controls */
+    .button-group {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+    button {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border);
+      color: var(--text-main);
+      border-radius: 6px;
+      padding: 6px 14px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    button:hover {
+      background: #21262d;
+      border-color: #8b949e;
+    }
+    button.primary {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #fff;
+    }
+    button.primary:hover {
+      background: var(--primary-hover);
+    }
+
+    /* Metrics */
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .metric-card {
+      background: var(--bg-base);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px 12px;
+    }
+    .metric-value {
+      font-size: 20px;
+      font-weight: 600;
+      font-family: var(--font-code);
+    }
+    .metric-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+
+    /* Issues List */
+    .findings-container {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    .finding-item {
+      background: var(--bg-base);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--border);
+      border-radius: 4px;
+      padding: 12px;
+    }
+    .finding-item.high { border-left-color: var(--danger); }
+    .finding-item.medium { border-left-color: var(--warning); }
+    .finding-item.low { border-left-color: var(--success); }
+
+    .finding-head {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 6px;
+    }
+    .finding-title {
+      font-weight: 600;
+      font-size: 13px;
+    }
+    .tag-severity {
+      font-size: 10px;
+      font-weight: 600;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: var(--font-code);
+    }
+    .tag-severity.high { background: rgba(248,81,73,0.15); color: var(--danger); }
+    .tag-severity.medium { background: rgba(210,153,34,0.15); color: var(--warning); }
+    .tag-severity.low { background: rgba(63,185,80,0.15); color: var(--success); }
+
+    .finding-meta {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-family: var(--font-code);
+      margin-bottom: 6px;
+    }
+    .finding-code {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 6px 8px;
+      font-family: var(--font-code);
+      font-size: 12px;
+      color: #e6edf3;
+      margin: 6px 0;
+      overflow-x: auto;
+    }
+    .finding-desc {
+      color: var(--text-muted);
+      font-size: 12px;
+      margin-bottom: 6px;
+    }
+    .finding-fix {
+      font-size: 12px;
+      color: var(--text-main);
+      background: rgba(56, 139, 253, 0.08);
+      border-radius: 4px;
+      padding: 6px 8px;
+      border: 1px solid rgba(56, 139, 253, 0.2);
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px 16px;
+      color: var(--text-muted);
+      font-size: 13px;
+    }
   </style>
 </head>
 <body>
 
 <header>
-  <div class="brand">◈ DevGuard<span> AI</span></div>
-  <div class="header-actions">
-    <div class="pill" id="ai-status">⚡ Gemini Powered</div>
+  <div style="display:flex; align-items:center;">
+    <span class="brand-title">DevGuard</span>
+    <span class="brand-subtitle">Application Security Audit Engine</span>
   </div>
+  <div class="badge" id="engineStatus">Ready</div>
 </header>
 
 <main>
-  <div class="eyebrow">INTELLIGENT CODE AUDITING</div>
-  <h1>Secure your code.<br><span>Powered by Gemini AI.</span></h1>
-  <p class="subtitle">
-    Combine heuristic pattern-matching with deep generative reasoning to detect SQL injections, remote code executions, logic flaws, and auto-generate fixes.
-  </p>
-
-  <!-- Gemini API Configuration Bar -->
-  <div class="api-bar">
-    <span style="font-size:13px; font-weight:600;">🔑 Gemini API Key:</span>
-    <input type="password" id="apiKey" placeholder="Paste your Google AI Studio key (AIzaSy...)">
-    <button id="saveKey">Save Key</button>
-    <small id="keyStatus" style="color:var(--muted)">Saved locally in browser</small>
+  <!-- Authentication Config Strip -->
+  <div class="config-strip">
+    <label for="apiKey">Gemini API Key</label>
+    <input type="password" id="apiKey" placeholder="AIzaSy...">
+    <button id="saveKey">Store Key</button>
+    <span id="keyLabel" style="font-size:12px; color:var(--text-muted);">Stored locally in browser session</span>
   </div>
 
   <div class="grid">
-    <!-- Code Input Panel -->
-    <section class="panel">
-      <div class="panel-head">
-        <h2>Source Code</h2>
-        <span class="tag">PYTHON</span>
+    <!-- Input Column -->
+    <div class="card">
+      <div class="card-header">
+        <h2>Source Buffer</h2>
+        <span class="badge">Python</span>
       </div>
-      <textarea id="code" spellcheck="false" placeholder="Paste Python code here..."></textarea>
-      
-      <div class="actions">
-        <button id="demo">Load Demo</button>
-        <button id="clear">Clear</button>
-        <button id="copy">Copy</button>
-      </div>
-      
-      <button class="btn-blue" id="scan" style="width:100%; margin-top:14px; padding:12px;">⚡ Rapid Rule Scan</button>
-      <button class="btn-ai" id="aiScan">✨ Deep AI Security Audit (Gemini)</button>
-      <p class="footer">Client-side processing. Your API Key & code stay directly between your browser and Google AI.</p>
-    </section>
+      <div class="card-body">
+        <textarea id="code" spellcheck="false" placeholder="# Insert Python code for evaluation..."></textarea>
+        
+        <div class="button-group">
+          <button id="demoBtn">Load Benchmark</button>
+          <button id="clearBtn">Clear</button>
+        </div>
 
-    <!-- Results Panel -->
-    <section class="panel">
-      <div class="panel-head">
-        <h2>Security Report</h2>
-        <span class="tag" id="status">READY</span>
+        <div class="button-group" style="margin-top: 14px;">
+          <button id="scanBtn" style="flex: 1;">Run Rule Scan</button>
+          <button id="aiScanBtn" class="primary" style="flex: 1;">Run AI Deep Audit</button>
+        </div>
       </div>
+    </div>
 
-      <div class="stats">
-        <div class="stat"><strong id="total">—</strong><span>FINDINGS</span></div>
-        <div class="stat"><strong id="critical" class="high">—</strong><span>HIGH RISK</span></div>
-        <div class="stat"><strong id="score">—</strong><span>RISK SCORE</span></div>
+    <!-- Findings Column -->
+    <div class="card">
+      <div class="card-header">
+        <h2>Audit Results</h2>
+        <button id="exportBtn" style="padding: 3px 8px; font-size: 11px;">Export JSON</button>
       </div>
+      <div class="card-body">
+        <div class="metrics">
+          <div class="metric-card">
+            <div class="metric-value" id="countFindings">0</div>
+            <div class="metric-label">Findings</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value" id="countCritical" style="color:var(--danger)">0</div>
+            <div class="metric-label">High Severity</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-value" id="riskScore">0</div>
+            <div class="metric-label">Risk Index</div>
+          </div>
+        </div>
 
-      <div class="muted" style="font-size:12px;">Risk Indicator</div>
-      <div class="scoreline"><div class="scorefill" id="bar"></div></div>
-
-      <div class="panel-head">
-        <h2>Findings & AI Explanations</h2>
-        <select id="filter" style="background:#0b1322; color:var(--text); border:1px solid var(--line); padding:6px 10px; border-radius:8px; font-size:12px;">
-          <option value="ALL">All Findings</option>
-          <option value="HIGH">High</option>
-          <option value="MEDIUM">Medium</option>
-          <option value="LOW">Low</option>
-        </select>
+        <div class="findings-container" id="findingsList">
+          <div class="empty-state">No analysis run yet. Paste code and select a scan mode.</div>
+        </div>
       </div>
-
-      <div id="results" class="result-list">
-        <div class="empty">Load demo or paste code, then run a Rapid Scan or Deep AI Audit.</div>
-      </div>
-
-      <div class="actions" style="margin-top:14px;">
-        <button id="report">Export Report JSON</button>
-      </div>
-    </section>
+    </div>
   </div>
 </main>
 
 <script>
 const $ = id => document.getElementById(id);
 
-// Load API key from LocalStorage
+// Storage
 window.addEventListener('DOMContentLoaded', () => {
-  const savedKey = localStorage.getItem('gemini_api_key');
-  if (savedKey) {
-    $('apiKey').value = savedKey;
-    $('keyStatus').textContent = "Key Loaded ✓";
-    $('keyStatus').style.color = "var(--green)";
+  const stored = localStorage.getItem('devguard_gemini_key');
+  if (stored) {
+    $('apiKey').value = stored;
+    $('keyLabel').textContent = "Key configured";
+    $('keyLabel').style.color = "var(--success)";
   }
 });
 
 $('saveKey').addEventListener('click', () => {
   const val = $('apiKey').value.trim();
   if (val) {
-    localStorage.setItem('gemini_api_key', val);
-    $('keyStatus').textContent = "Saved ✓";
-    $('keyStatus').style.color = "var(--green)";
+    localStorage.setItem('devguard_gemini_key', val);
+    $('keyLabel').textContent = "Key saved";
+    $('keyLabel').style.color = "var(--success)";
   } else {
-    localStorage.removeItem('gemini_api_key');
-    $('keyStatus').textContent = "Cleared";
+    localStorage.removeItem('devguard_gemini_key');
+    $('keyLabel').textContent = "Key cleared";
+    $('keyLabel').style.color = "var(--text-muted)";
   }
 });
 
-const demoCode = `import subprocess
+const benchmarkCode = `import os
+import subprocess
 import pickle
+from flask import Flask, request
+import sqlite3
 
-API_KEY = "sk_live_prod_99214_secret_key"
+app = Flask(__name__)
 
-def get_user_records(user_id, cursor):
-    # Unsanitized query concatenation
-    query = "SELECT * FROM users WHERE id = " + user_id
+JWT_SECRET_KEY = "super_secret_jwt_token_12345678"
+AWS_ACCESS_KEY = "AKIAIOSFODNN7EXAMPLE_SECRET_KEY"
+
+@app.route("/user", methods=["GET"])
+def get_user():
+    user_id = request.args.get("id")
+    conn = sqlite3.connect("database.db")
+    cursor = conn.cursor()
+    query = f"SELECT username, email FROM users WHERE id = '{user_id}'"
     cursor.execute(query)
+    return str(cursor.fetchall())
 
-def deserialize_payload(user_payload):
-    return pickle.loads(user_payload)
+@app.route("/load_session", methods=["POST"])
+def load_session():
+    cookie_data = request.cookies.get("session")
+    session_obj = pickle.loads(cookie_data)
+    return f"Welcome {session_obj}"
 
-def run_diagnostic(cmd):
-    return subprocess.run(cmd, shell=True)
+@app.route("/run_ping", methods=["POST"])
+def run_ping():
+    ip_addr = request.json.get("ip")
+    cmd = "ping -c 1 " + ip_addr
+    result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+    return result.stdout
+
+@app.route("/read_log", methods=["GET"])
+def read_log():
+    filename = request.args.get("file")
+    log_path = os.path.join("/var/logs", filename)
+    with open(log_path, "r") as f:
+        return f.read()
+
+@app.route("/calc", methods=["POST"])
+def calculate():
+    user_math = request.json.get("expr")
+    return str(eval(user_math))
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000, debug=True)
 `;
 
-let findings = [];
-let lastSummary = null;
+let currentFindings = [];
 
-// Heuristic Rule Engine
-function scanPython(source) {
-  const lines = source.split("\n");
-  const found = [];
-  const rules = [
-    { id:"EVAL-001", severity:"HIGH", title:"Dynamic code execution", test:/\beval\s*\(/, detail:"eval() executes attacker-controlled Python syntax.", fix:"Use explicit parsing or ast.literal_eval." },
-    { id:"SQL-001", severity:"HIGH", title:"Possible SQL injection", test:/(execute|executemany)\s*\(\s*(f["']|["'][^"']*["']\s*\+)/i, detail:"Raw query formatting enables SQL manipulation.", fix:"Use parameterized prepared queries." },
-    { id:"SECRET-001", severity:"HIGH", title:"Hardcoded secret detected", test:/(api[_-]?key|secret|token)\s*=\s*["'][^"']{8,}["']/i, detail:"Credential detected directly inside source code.", fix:"Use environment variables or a key vault." },
-    { id:"PICKLE-001", severity:"HIGH", title:"Insecure Deserialization", test:/\bpickle\.(load|loads)\s*\(/, detail:"Pickle deserialization allows arbitrary remote code execution.", fix:"Use JSON, Protocol Buffers, or HMAC verification." },
-    { id:"SHELL-001", severity:"HIGH", title:"Shell command injection risk", test:/subprocess\.(run|Popen|call)\s*\([^)]*shell\s*=\s*True/, detail:"shell=True combined with arguments permits shell breakout.", fix:"Set shell=False and pass arguments as an array." }
+// Improved Heuristic Engine with broad variable support & multi-line query patterns
+function runRegexEngine(src) {
+  const lines = src.split("\n");
+  const issues = [];
+
+  const patterns = [
+    {
+      id: "CWE-798",
+      severity: "HIGH",
+      title: "Hardcoded Credential",
+      regex: /([a-z0-9_-]*(api[_-]?key|secret|token|password)[a-z0-9_-]*)\s*=\s*["'][^"']{8,}["']/i,
+      desc: "Hardcoded cryptographic secret or token detected in source code.",
+      fix: "Store credentials in environment variables or a dedicated key store."
+    },
+    {
+      id: "CWE-89",
+      severity: "HIGH",
+      title: "SQL Injection Vector",
+      regex: /(SELECT|INSERT|UPDATE|DELETE).*(f["']|["'].*\+)/i,
+      desc: "Dynamic query concatenation enables SQL manipulation.",
+      fix: "Use parameterized queries or ORM abstraction."
+    },
+    {
+      id: "CWE-502",
+      severity: "HIGH",
+      title: "Unsafe Object Deserialization",
+      regex: /pickle\.(loads?|Unpickler)\s*\(/,
+      desc: "Arbitrary code execution risk from deserializing untrusted binary payload.",
+      fix: "Migrate to safe serialization formats such as JSON or Protocol Buffers."
+    },
+    {
+      id: "CWE-78",
+      severity: "HIGH",
+      title: "Command Injection",
+      regex: /subprocess\.(run|Popen|call|check_output)\s*\([^)]*shell\s*=\s*True/,
+      desc: "Subprocess execution with shell=True permits command injection breakout.",
+      fix: "Pass execution arguments as a tokenized list with shell=False."
+    },
+    {
+      id: "CWE-95",
+      severity: "HIGH",
+      title: "Dynamic Evaluation Vulnerability",
+      regex: /\beval\s*\(/,
+      desc: "Direct evaluation of dynamic input strings allows arbitrary code execution.",
+      fix: "Use ast.literal_eval for literals or implement an explicit grammar parser."
+    },
+    {
+      id: "CWE-215",
+      severity: "MEDIUM",
+      title: "Debug Mode Enabled in Framework",
+      regex: /run\(.*debug\s*=\s*True.*\)/,
+      desc: "Running interactive debuggers in production exposes internal tracebacks and interactive consoles.",
+      fix: "Set debug=False or control via explicit environment configuration."
+    },
+    {
+      id: "CWE-22",
+      severity: "MEDIUM",
+      title: "Potential Path Traversal",
+      regex: /open\s*\(.*os\.path\.join\s*\(/,
+      desc: "Unchecked path joining may permit directory traversal attacks.",
+      fix: "Resolve absolute paths and ensure target paths remain within the intended base directory."
+    }
   ];
 
-  lines.forEach((line, idx) => {
-    rules.forEach(r => {
-      if (r.test.test(line)) {
-        found.push({
-          id: r.id, severity: r.severity, title: r.title,
-          line: idx + 1, code: line.trim(), detail: r.detail, fix: r.fix
+  lines.forEach((line, index) => {
+    patterns.forEach(p => {
+      if (p.regex.test(line)) {
+        issues.push({
+          id: p.id,
+          severity: p.severity,
+          title: p.title,
+          line: index + 1,
+          code: line.trim(),
+          desc: p.desc,
+          fix: p.fix
         });
       }
     });
   });
-  return found;
+
+  return issues;
 }
 
-function escapeHTML(str) {
-  return String(str || "").replace(/[&<>"']/g, c => ({
-    "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;"
+function updateView() {
+  const high = currentFindings.filter(f => f.severity === "HIGH").length;
+  const medium = currentFindings.filter(f => f.severity === "MEDIUM").length;
+  const low = currentFindings.filter(f => f.severity === "LOW").length;
+  const score = Math.min(100, (high * 30) + (medium * 15) + (low * 5));
+
+  $('countFindings').textContent = currentFindings.length;
+  $('countCritical').textContent = high;
+  $('riskScore').textContent = score;
+
+  const container = $('findingsList');
+  if (!currentFindings.length) {
+    container.innerHTML = '<div class="empty-state">No issues detected for this configuration.</div>';
+    return;
+  }
+
+  container.innerHTML = currentFindings.map(item => `
+    <div class="finding-item ${item.severity.toLowerCase()}">
+      <div class="finding-head">
+        <span class="finding-title">${escape(item.title)}</span>
+        <span class="tag-severity ${item.severity.toLowerCase()}">${escape(item.severity)}</span>
+      </div>
+      <div class="finding-meta">${escape(item.id)} · Line ${item.line || 'N/A'}</div>
+      ${item.code ? `<div class="finding-code">${escape(item.code)}</div>` : ''}
+      <div class="finding-desc">${escape(item.desc)}</div>
+      <div class="finding-fix">Remediation: ${escape(item.fix)}</div>
+    </div>
+  `).join('');
+}
+
+function escape(str) {
+  return String(str || '').replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
   })[c]);
 }
 
-function updateUI() {
-  const high = findings.filter(f => f.severity === "HIGH").length;
-  const medium = findings.filter(f => f.severity === "MEDIUM").length;
-  const low = findings.filter(f => f.severity === "LOW").length;
-  const score = Math.min(100, (high * 30) + (medium * 15) + (low * 5));
-
-  $('total').textContent = findings.length;
-  $('critical').textContent = high;
-  $('score').textContent = score;
-  $('bar').style.width = score + "%";
-  $('bar').style.background = score >= 50 ? "var(--red)" : score >= 20 ? "var(--yellow)" : "var(--green)";
-  render();
-}
-
-function render() {
-  const filter = $('filter').value;
-  const list = findings.filter(f => filter === "ALL" || f.severity === filter);
-  
-  $('results').innerHTML = list.length ? list.map(f => `
-    <article class="issue">
-      <div class="issue-top">
-        <strong>${escapeHTML(f.title)}</strong>
-        <span class="severity ${f.severity.toLowerCase()}">${f.severity}</span>
-      </div>
-      <div class="tag">${escapeHTML(f.id)} ${f.line ? '· Line ' + f.line : ''}</div>
-      ${f.code ? `<p><code>${escapeHTML(f.code)}</code></p>` : ''}
-      <p>${escapeHTML(f.detail)}</p>
-      <p class="fix">💡 ${escapeHTML(f.fix)}</p>
-    </article>
-  `).join("") : `<div class="empty">No findings match this filter.</div>`;
-}
-
-// Rapid Rule-Based Scan
-$('scan').addEventListener('click', () => {
+// Rule Scan Action
+$('scanBtn').addEventListener('click', () => {
   const code = $('code').value;
-  if (!code.trim()) return alert("Please paste code first.");
-  findings = scanPython(code);
-  $('status').textContent = "RULE SCAN COMPLETE";
-  updateUI();
+  if (!code.trim()) return;
+  $('engineStatus').textContent = "Running Static Analysis";
+  currentFindings = runRegexEngine(code);
+  updateView();
+  $('engineStatus').textContent = "Static Scan Complete";
 });
 
-// Deep Gemini AI Scan
-$('aiScan').addEventListener('click', async () => {
+// Gemini Deep Audit Action
+$('aiScanBtn').addEventListener('click', async () => {
   const code = $('code').value;
-  const apiKey = $('apiKey').value.trim() || localStorage.getItem('gemini_api_key');
-  
-  if (!code.trim()) return alert("Please paste Python code first.");
-  if (!apiKey) return alert("Please enter your Gemini API Key in the top field first.");
+  const key = $('apiKey').value.trim() || localStorage.getItem('devguard_gemini_key');
 
-  $('status').textContent = "GEMINI ANALYZING...";
-  $('results').innerHTML = '<div class="empty">Connecting to Gemini AI Engine... Analyzing vulnerabilities and generating remediation...</div>';
+  if (!code.trim()) {
+    alert("Please provide source code first.");
+    return;
+  }
+  if (!key) {
+    alert("Please configure a Gemini API key.");
+    return;
+  }
 
-  const prompt = `You are a Senior Security Engineer. Analyze this Python code for vulnerabilities and security flaws.
-Output ONLY a JSON array of objects without markdown fences, with these exact keys:
-"id" (e.g. GEMINI-001), "severity" ("HIGH", "MEDIUM", or "LOW"), "title" (concise name), "line" (approx line number or 0), "code" (offending line), "detail" (vulnerability explanation), "fix" (exact fix recommendation).
+  $('engineStatus').textContent = "Running Generative Audit";
+  $('findingsList').innerHTML = '<div class="empty-state">Querying audit model and correlating AST flaws...</div>';
 
-Code to analyze:
-${code}`;
+  const systemInstruction = `You are a static code security auditor. 
+Inspect the code for vulnerabilities (CWE, OWASP Top 10, logic bypasses, command injection, path traversal, hardcoded secrets).
+Return strictly a valid JSON array of objects without Markdown formatting or fences.
+Each object must have these exact keys:
+- "id": standard identifier like CWE-89, CWE-78, etc.
+- "severity": "HIGH", "MEDIUM", or "LOW"
+- "title": standard short vulnerability title
+- "line": integer line number (or 0 if broad)
+- "code": the vulnerable line or snippet
+- "desc": concise flaw explanation
+- "fix": concise remediation action`;
 
   try {
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
+        contents: [
+          { role: "user", parts: [{ text: `${systemInstruction}\n\nCode to inspect:\n${code}` }] }
+        ],
         generationConfig: { responseMimeType: "application/json" }
       })
     });
 
-    const data = await response.json();
+    const data = await res.json();
     if (data.error) throw new Error(data.error.message);
 
-    const rawText = data.candidates[0].content.parts[0].text;
-    const aiFindings = JSON.parse(rawText);
-
-    // Combine rule findings + AI findings
-    const ruleFindings = scanPython(code);
-    findings = [...aiFindings, ...ruleFindings];
+    const parsed = JSON.parse(data.candidates[0].content.parts[0].text);
     
-    $('status').textContent = "AI AUDIT COMPLETE";
-    lastSummary = { timestamp: new Date().toISOString(), findings };
-    updateUI();
+    // Combine with static engine findings, de-duplicating by line number where applicable
+    const staticIssues = runRegexEngine(code);
+    const lineMap = new Set(parsed.map(p => p.line));
+    const uniqueStatic = staticIssues.filter(s => !lineMap.has(s.line));
+
+    currentFindings = [...parsed, ...uniqueStatic];
+    updateView();
+    $('engineStatus').textContent = "Audit Complete";
   } catch (err) {
-    $('status').textContent = "AI AUDIT FAILED";
-    $('results').innerHTML = `<div class="empty" style="color:var(--red);">Error connecting to Gemini API: ${escapeHTML(err.message)}</div>`;
+    $('engineStatus').textContent = "Audit Failed";
+    $('findingsList').innerHTML = `<div class="empty-state" style="color:var(--danger)">Error: ${escape(err.message)}</div>`;
   }
 });
 
-$('demo').addEventListener('click', () => {$('code').value = demoCode;
-  findings = scanPython(demoCode);
-  updateUI();
+// Utilities
+$('demoBtn').addEventListener('click', () => {$('code').value = benchmarkCode;
 });
 
-$('clear').addEventListener('click', () => {$('code').value = "";
-  findings = [];
-  ['total','critical','score'].forEach(id => $(id).textContent = "—");
-  $('bar').style.width = "0";
-  $('status').textContent = "READY";
-  $('results').innerHTML = '<div class="empty">Paste code to start a new scan.</div>';
+$('clearBtn').addEventListener('click', () => {$('code').value = '';
+  currentFindings = [];
+  $('countFindings').textContent = '0';$('countCritical').textContent = '0';
+  $('riskScore').textContent = '0';$('findingsList').innerHTML = '<div class="empty-state">Buffer cleared.</div>';
+  $('engineStatus').textContent = 'Ready';
 });
 
-$('copy').addEventListener('click', () => navigator.clipboard.writeText($('code').value));
-
-$('filter').addEventListener('change', render);
-
-$('report').addEventListener('click', () => {
-  const blob = new Blob([JSON.stringify({ project:"DevGuard AI", findings }, null, 2)], { type:"application/json" });
+$('exportBtn').addEventListener('click', () => {
+  if (!currentFindings.length) return;
+  const blob = new Blob([JSON.stringify({ audit: "DevGuard", findings: currentFindings }, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = "devguard-report.json";
+  a.href = url;
+  a.download = "audit-report.json";
   a.click();
+  URL.revokeObjectURL(url);
 });
 </script>
 </body>
