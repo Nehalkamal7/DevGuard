@@ -17,7 +17,7 @@ DevGuard combines two complementary layers of analysis:
 
 ## Fine-Tuned Model Weights
 The companion LoRA adapter trained for this project is available on Hugging Face:
-- Model Hub: `https://huggingface.co/YOUR_USERNAME/devguard-qwen-1.5b-security`
+- Model Hub: `https://huggingface.co/nehalkamal7/devguard-qwen-1.5b-security`
 
 ## Tech Stack
 - **Frontend / Engine:** HTML5, CSS3 (Enterprise Dark UI), Vanilla JavaScript (ES6+)
